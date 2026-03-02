@@ -24,7 +24,7 @@ main:
 
         - name: Fetch and run scoring script
           script: |
-            git clone --depth 1 https://cnb.cool/LearningOS/OSCamp-2026S/oscamp-base-ci.git /tmp/ci
+            git clone --depth 1 https://cnb.cool/LearningOS/OSCamp-2026S/keys.git /tmp/ci
             chmod +x /tmp/ci/scoring.sh
             bash /tmp/ci/scoring.sh
 
@@ -61,7 +61,7 @@ main:
 
         - name: Fetch and run scoring script
           script: |
-            git clone --depth 1 https://cnb.cool/LearningOS/OSCamp-2026S/oscamp-base-ci.git /tmp/ci
+            git clone --depth 1 https://cnb.cool/LearningOS/OSCamp-2026S/keys.git /tmp/ci
             chmod +x /tmp/ci/scoring.sh
             bash /tmp/ci/scoring.sh
 
@@ -86,7 +86,8 @@ $:
         - vscode
         - docker
       stages:
-        - name: Setup environment
+        - name: Build oscamp CLI and setup environment
           script: |
-            rustup target add riscv64gc-unknown-linux-gnu
-            echo "Environment ready. Run 'bash check.sh' to check your progress."
+            cargo build -p oscamp-cli
+            echo 'export PATH="$PWD/target/debug:$PATH"' >> ~/.bashrc
+            echo "Environment ready. Run 'oscamp watch' or 'oscamp list' to start."
