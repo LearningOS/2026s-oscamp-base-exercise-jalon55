@@ -1,10 +1,11 @@
 # CNB Cloud-Native CI Pipeline for OSCamp Base Exercises
-# Push / PR triggers fetch scoring script from private repo and run it
-# "$: vscode:" enables cloud-native development (WebIDE)
 #
-# Scoring script is hosted in a separate private repo to prevent tampering:
-#   LearningOS/OSCamp-2026S/oscamp-base-ci (contains scoring.sh)
-# Secrets (OSCAMP_TOKEN, OSCAMP_COURSE_ID) are imported from:
+# Security model:
+#   - push: runs on student's fork, but secrets are only in upstream → can't fake scores
+#   - pull_request.target: uses UPSTREAM's .cnb.yml → student can't modify scoring logic
+#   - Scoring is inlined here (not in a separate script students could tamper with)
+#
+# Secrets (OSCAMP_TOKEN, OSCAMP_COURSE_ID) imported from:
 #   LearningOS/OSCamp-2026S/keys/oscamp-base-secrets.yml
 
 main:
@@ -22,11 +23,95 @@ main:
         - name: Setup riscv64 target
           script: rustup target add riscv64gc-unknown-linux-gnu
 
-        - name: Fetch and run scoring script
+        - name: Run scoring
           script: |
-            git clone --depth 1 https://cnb.cool/LearningOS/OSCamp-2026S/keys.git /tmp/ci
-            chmod +x /tmp/ci/scoring.sh
-            bash /tmp/ci/scoring.sh
+            RISCV64_TARGET="riscv64gc-unknown-linux-gnu"
+            RISCV64_SYSROOT="${RISCV64_SYSROOT:-/usr/riscv64-linux-gnu}"
+            export CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_RUNNER="qemu-riscv64 -L $RISCV64_SYSROOT"
+
+            TOTAL_SCORE=0
+            PASS=0
+            FAIL=0
+            RESULTS="[]"
+
+            run_test() {
+              local pkg=$1 score=$2 target=$3
+              if [ "$target" = "riscv64" ]; then
+                cargo test -p "$pkg" --target "$RISCV64_TARGET" --quiet 2>/dev/null
+              else
+                cargo test -p "$pkg" --quiet 2>/dev/null
+              fi
+            }
+
+            check() {
+              local pkg=$1 score=$2 target=${3:-default}
+              printf "  %-25s [%2d pts]  " "$pkg" "$score"
+              if run_test "$pkg" "$score" "$target"; then
+                echo "PASS (+$score)"
+                TOTAL_SCORE=$((TOTAL_SCORE + score))
+                PASS=$((PASS + 1))
+                RESULTS=$(echo "$RESULTS" | jq --arg p "$pkg" --arg s "$score" \
+                  '. + [{"package":$p,"score":($s|tonumber),"max":($s|tonumber),"status":"pass"}]')
+              else
+                echo "FAIL"
+                FAIL=$((FAIL + 1))
+                RESULTS=$(echo "$RESULTS" | jq --arg p "$pkg" --arg s "$score" \
+                  '. + [{"package":$p,"score":0,"max":($s|tonumber),"status":"fail"}]')
+              fi
+            }
+
+            echo "========================================="
+            echo "   OSCamp Exercise Scoring"
+            echo "========================================="
+
+            # Module 1: Concurrency (15 pts)
+            check thread_spawn        3
+            check mutex_counter       4
+            check channel             4
+            check process_pipe        4
+            # Module 2: no_std (24 pts)
+            check mem_primitives      4
+            check bump_allocator      5
+            check free_list_allocator 5
+            check syscall_wrapper     5
+            check fd_table            5
+            # Module 3: OS Concurrency (21 pts)
+            check atomic_counter      4
+            check atomic_ordering     4
+            check spinlock            4
+            check spinlock_guard      4
+            check rwlock              5
+            # Module 4: Context Switch (12 pts)
+            check stack_coroutine     6  riscv64
+            check green_threads       6  riscv64
+            # Module 5: Async (14 pts)
+            check basic_future        4
+            check tokio_tasks         3
+            check async_channel_ex    3
+            check select_timeout      4
+            # Module 6: Page Tables (14 pts)
+            check pte_flags           3
+            check page_table_walk     4
+            check multi_level_pt      4
+            check tlb_sim             3
+
+            TOTAL=$((PASS + FAIL))
+            echo "========================================="
+            echo "  Passed: $PASS / Failed: $FAIL / Total: $TOTAL"
+            echo "  Score:  $TOTAL_SCORE / 100"
+            echo "========================================="
+
+            mkdir -p .ide/result
+            echo "$RESULTS" | jq '{
+              exercises: [.[] | {package,score,max,status}],
+              statistics: {
+                total_exercitations: '"$TOTAL"',
+                total_succeeds: '"$PASS"',
+                total_failures: '"$FAIL"',
+                total_score: '"$TOTAL_SCORE"',
+                total_possible: 100
+              }
+            }' > .ide/result/check_result.json
 
         - name: Post score to OpenCamp
           script: |
@@ -59,11 +144,95 @@ main:
         - name: Setup riscv64 target
           script: rustup target add riscv64gc-unknown-linux-gnu
 
-        - name: Fetch and run scoring script
+        - name: Run scoring
           script: |
-            git clone --depth 1 https://cnb.cool/LearningOS/OSCamp-2026S/keys.git /tmp/ci
-            chmod +x /tmp/ci/scoring.sh
-            bash /tmp/ci/scoring.sh
+            RISCV64_TARGET="riscv64gc-unknown-linux-gnu"
+            RISCV64_SYSROOT="${RISCV64_SYSROOT:-/usr/riscv64-linux-gnu}"
+            export CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_RUNNER="qemu-riscv64 -L $RISCV64_SYSROOT"
+
+            TOTAL_SCORE=0
+            PASS=0
+            FAIL=0
+            RESULTS="[]"
+
+            run_test() {
+              local pkg=$1 score=$2 target=$3
+              if [ "$target" = "riscv64" ]; then
+                cargo test -p "$pkg" --target "$RISCV64_TARGET" --quiet 2>/dev/null
+              else
+                cargo test -p "$pkg" --quiet 2>/dev/null
+              fi
+            }
+
+            check() {
+              local pkg=$1 score=$2 target=${3:-default}
+              printf "  %-25s [%2d pts]  " "$pkg" "$score"
+              if run_test "$pkg" "$score" "$target"; then
+                echo "PASS (+$score)"
+                TOTAL_SCORE=$((TOTAL_SCORE + score))
+                PASS=$((PASS + 1))
+                RESULTS=$(echo "$RESULTS" | jq --arg p "$pkg" --arg s "$score" \
+                  '. + [{"package":$p,"score":($s|tonumber),"max":($s|tonumber),"status":"pass"}]')
+              else
+                echo "FAIL"
+                FAIL=$((FAIL + 1))
+                RESULTS=$(echo "$RESULTS" | jq --arg p "$pkg" --arg s "$score" \
+                  '. + [{"package":$p,"score":0,"max":($s|tonumber),"status":"fail"}]')
+              fi
+            }
+
+            echo "========================================="
+            echo "   OSCamp Exercise Scoring"
+            echo "========================================="
+
+            # Module 1: Concurrency (15 pts)
+            check thread_spawn        3
+            check mutex_counter       4
+            check channel             4
+            check process_pipe        4
+            # Module 2: no_std (24 pts)
+            check mem_primitives      4
+            check bump_allocator      5
+            check free_list_allocator 5
+            check syscall_wrapper     5
+            check fd_table            5
+            # Module 3: OS Concurrency (21 pts)
+            check atomic_counter      4
+            check atomic_ordering     4
+            check spinlock            4
+            check spinlock_guard      4
+            check rwlock              5
+            # Module 4: Context Switch (12 pts)
+            check stack_coroutine     6  riscv64
+            check green_threads       6  riscv64
+            # Module 5: Async (14 pts)
+            check basic_future        4
+            check tokio_tasks         3
+            check async_channel_ex    3
+            check select_timeout      4
+            # Module 6: Page Tables (14 pts)
+            check pte_flags           3
+            check page_table_walk     4
+            check multi_level_pt      4
+            check tlb_sim             3
+
+            TOTAL=$((PASS + FAIL))
+            echo "========================================="
+            echo "  Passed: $PASS / Failed: $FAIL / Total: $TOTAL"
+            echo "  Score:  $TOTAL_SCORE / 100"
+            echo "========================================="
+
+            mkdir -p .ide/result
+            echo "$RESULTS" | jq '{
+              exercises: [.[] | {package,score,max,status}],
+              statistics: {
+                total_exercitations: '"$TOTAL"',
+                total_succeeds: '"$PASS"',
+                total_failures: '"$FAIL"',
+                total_score: '"$TOTAL_SCORE"',
+                total_possible: 100
+              }
+            }' > .ide/result/check_result.json
 
         - name: Post score to OpenCamp
           script: |
@@ -86,8 +255,5 @@ $:
         - vscode
         - docker
       stages:
-        - name: Build oscamp CLI and setup environment
-          script: |
-            cargo build -p oscamp-cli
-            echo 'export PATH="$PWD/target/debug:$PATH"' >> ~/.bashrc
-            echo "Environment ready. Run 'oscamp watch' or 'oscamp list' to start."
+        - name: Install oscamp CLI
+          script: cargo install --path cli
