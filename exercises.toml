@@ -90,92 +90,113 @@ pipe_through_cat:
 get_exit_code:
   Command::new("sh").args(["-c", command]).status().unwrap().code().unwrap()"""
 
+
 # ============================================================
 #  Module 2: no_std Development
 # ============================================================
 
 [[exercise]]
-name = "Global Memory Allocator (without free)"
-package = "global_allocator_without_free"
-path = "exercises/02_no_std_dev/01_global_allocator_without_free/src/lib.rs"
+name = "Memory Primitives (no_std)"
+package = "mem_primitives"
+path = "exercises/02_no_std_dev/01_mem_primitives/src/lib.rs"
 module = "no_std Development"
-description = "Implement Bump allocator (no dealloc) with GlobalAlloc trait, understand memory alignment"
+description = "Implement memcpy/memset/memmove/strlen/strcmp memory primitives in a #![no_std] environment"
 hint = """
-alloc implementation steps:
-  1. let heap_start = self.heap.get() as usize;
-  2. let current = self.next.load(Ordering::Relaxed);
-  3. let aligned = (heap_start + current + layout.align() - 1) & !(layout.align() - 1);
-  4. let new_next = aligned - heap_start + layout.size();
-  5. if new_next > HEAP_SIZE { return std::ptr::null_mut(); }
-  6. self.next.store(new_next, Ordering::Relaxed);
-  7. aligned as *mut u8
+General approach:
+  - All functions operate via unsafe pointer arithmetic using ptr.add(i)
+  - Note the return value requirements (memcpy/memset/memmove must return the dst pointer)
 
-dealloc: Bump allocator does not free individual blocks; leave the function body empty.
+my_memmove vs my_memcpy:
+  - memcpy can simply copy bytes forward one by one
+  - memmove must handle overlapping src and dst regions
+  - Think: what happens when dst is after src with overlap and you copy forward?
 
-Key: alignment formula (addr + align - 1) & !(align - 1) rounds up to align multiple."""
+my_strcmp:
+  - C strcmp semantics: return 0 if equal, otherwise the difference of the first differing byte
+  - Don't forget to handle the case where both strings reach '\\0'"""
 
 [[exercise]]
-name = "Allocator with Free"
-package = "allocator_with_free"
-path = "exercises/02_no_std_dev/02_allocator_with_free/src/lib.rs"
+name = "Bump Allocator (no_std core)"
+package = "bump_allocator"
+path = "exercises/02_no_std_dev/02_bump_allocator/src/lib.rs"
 module = "no_std Development"
-description = "Implement free-list allocator with both alloc and dealloc; single-round and multi-round (batch / interleaved) reuse"
+description = "Implement a Bump Allocator with core::alloc::GlobalAlloc, using CAS atomics for thread safety"
 hint = """
-You may use any correct algorithm (first-fit, best-fit, coalescing on free, etc.); the reference uses first-fit.
+Core steps for alloc:
+  1. Load the current allocation position (next)
+  2. Align up according to layout.align() (think about the bit trick for rounding up)
+  3. Check that the aligned address + layout.size() does not exceed the heap boundary
+  4. Atomically update next with CAS (compare_exchange); retry on failure
 
-Block layout: [size: 8 bytes][payload]. Return pointer = block + 8. Minimum block = 16 bytes.
-
-alloc: Traverse free list (free_head), find a block with size >= need. Unlink; if remainder >= MIN_BLOCK, split and insert remainder. Write need at block start, return (block + 8). No fit => null_mut().
-
-dealloc: block_start = ptr - 8, block_size = *(block_start). Insert at head: *(block_start) = size, *(block_start+8) = free_head, set_free_head(block_start)."""
+Think about:
+  - Why can't you use a simple store instead of CAS? (what happens under concurrency?)
+  - The align-up formula: (addr + align - 1) & !(align - 1) — why does it work?
+  - Why is dealloc typically a no-op in a bump allocator?"""
 
 [[exercise]]
-name = "Raw System Calls"
-package = "raw_syscall"
-path = "exercises/02_no_std_dev/03_raw_syscall/src/lib.rs"
+name = "Free-List Allocator"
+package = "free_list_allocator"
+path = "exercises/02_no_std_dev/03_free_list_allocator/src/lib.rs"
 module = "no_std Development"
-description = "Use asm! inline assembly to directly make Linux system calls"
+description = "Build a Free-List Allocator on top of a Bump Allocator with an intrusive linked list for deallocation"
 hint = """
-sys_write:
-  let ret: isize;
-  unsafe {
-      asm!(
-          "syscall",
-          in("rax") 1u64,         // write system call number
-          in("rdi") fd as u64,
-          in("rsi") buf.as_ptr() as u64,
-          in("rdx") buf.len() as u64,
-          lateout("rax") ret,
-          out("rcx") _, out("r11") _,  // syscall clobbered registers
-      );
-  }
+alloc strategy (two-level):
+  1. Walk the free list looking for a reusable block (first-fit: size sufficient and alignment met)
+  2. If found, unlink the node from the list and return it; otherwise fall back to bump allocation
+  - Unlinking requires the "previous pointer" technique to update the predecessor's next
 
-sys_getpid: rax = 39, no arguments; let ret: i32, lateout("rax") ret, same clobbers (rcx, r11).
+dealloc strategy:
+  - Insert the freed block as a FreeBlock node at the head of the list (head insertion)
+  - FreeBlock is intrusive: it reuses the first bytes of the freed memory for size and next
 
-sys_println: call sys_write(1, msg.as_bytes()) then sys_write(1, b\"\\n\")."""
+Think about:
+  - Why can free list nodes live inside the freed memory? What's the minimum block size?
+  - What are the trade-offs between first-fit and best-fit?"""
 
 [[exercise]]
-name = "File Descriptors"
-package = "file_descriptor"
-path = "exercises/02_no_std_dev/04_file_descriptor/src/lib.rs"
+name = "Syscall Wrapper"
+package = "syscall_wrapper"
+path = "exercises/02_no_std_dev/04_syscall_wrapper/src/lib.rs"
 module = "no_std Development"
-description = "Use raw system calls to operate file descriptors, implement RAII auto-close"
+description = "Describe the Linux syscall ABI (instruction, registers, syscall numbers) for x86_64/aarch64/riscv64 and implement real syscalls on the current platform"
 hint = """
-Drop for FileDesc (only the #[cfg(target_os = \"linux\")] impl):
-  unsafe { syscall1(SYS_CLOSE, self.fd as u64); }
+ABI knowledge:
+  - Look up the syscall calling convention docs for each architecture
+  - x86_64: see Linux kernel arch/x86/entry/syscalls/ or man syscall(2)
+  - aarch64/riscv64: they share the asm-generic syscall number table, different from x86_64
+  - Think: which architectures' syscall instructions clobber extra registers? Why?
 
-open_for_write:
-  let mut path_buf: Vec<u8> = path.as_bytes().to_vec();
-  path_buf.push(0);  // C string needs null terminator
-  let fd = unsafe { syscall3(SYS_OPEN, path_buf.as_ptr() as u64,
-               O_WRONLY | O_CREAT | O_TRUNC, 0o644) };
-  if fd < 0 { Err(fd) } else { Ok(FileDesc::from_raw(fd as i32)) }
+syscall3 inline assembly:
+  - Check the Rust core::arch::asm! docs for inlateout / in / out usage
+  - x86_64's syscall instruction implicitly clobbers two registers — declare them with out
+  - aarch64's return register is also the first argument register — use inlateout
 
-open_for_read: same path handling, flags = O_RDONLY, mode = 0; same Err/Ok handling.
+sys_write and other wrappers:
+  - Use the NATIVE_SYS_* constants (already defined per platform), not hardcoded numbers
+  - buf.as_ptr() as usize converts a slice pointer to the address value syscall expects"""
 
-fd_write / fd_read:
-  let ret = unsafe { syscall3(SYS_WRITE or SYS_READ, fd.raw() as u64, buf.as_ptr() as u64, buf.len() as u64) };
-  if ret < 0 { Err(ret) } else { Ok(ret as usize) }"""
+[[exercise]]
+name = "File Descriptor Table"
+package = "fd_table"
+path = "exercises/02_no_std_dev/05_fd_table/src/lib.rs"
+module = "no_std Development"
+description = "Implement a process fd table: Vec<Option<Arc<dyn File>>> with alloc/get/close and lowest-fd reuse"
+hint = """
+Core data structure:
+  - Use Vec<Option<...>> to represent the fd table; the index IS the fd number
+  - None means the fd is unused, Some(...) means allocated
+
+alloc — lowest fd allocation:
+  - POSIX requires open() to return the lowest available fd
+  - First scan existing slots for the first None; if not found, push a new entry
+
+get / close:
+  - Don't forget bounds checking: fd may exceed the Vec length
+  - close sets the slot to None rather than removing from the Vec (why?)
+
+Think about:
+  - Why Arc<dyn File> instead of Box<dyn File>? (multiple fds can point to the same file)
+  - How would you implement dup2 on top of this table?"""
 
 # ============================================================
 #  Module 3: OS Concurrency Advanced

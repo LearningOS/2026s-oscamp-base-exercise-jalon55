@@ -1,6 +1,6 @@
 #!/bin/bash
-# OSCamp 练习检查脚本
-# 逐个检查每个练习的测试状态。第四章（riscv64）在 x86 上通过 QEMU 用户态运行，无需单独脚本。
+# OSCamp Exercise Checker
+# Checks each exercise's test status locally (no scoring — scoring runs in CI).
 
 set -e
 
@@ -14,15 +14,14 @@ PASS=0
 FAIL=0
 SKIP=0
 
-# 仓库根目录（本脚本所在目录）
+# Repository root (where this script lives)
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 第四章使用的 target 与 runner（绝对路径，保证任意目录执行 check.sh 都能跑）
+# Module 4 uses riscv64 target
 RISCV64_TARGET="riscv64gc-unknown-linux-gnu"
 RISCV64_SYSROOT="${RISCV64_SYSROOT:-/usr/riscv64-linux-gnu}"
 
-# 确保 riscv64 工具链与运行环境就绪（仅在需要跑第四章且本机为 Linux 非 riscv64 时执行）
-# macOS 不执行 setup，由下方逻辑对第四章做 SKIP。
+# Ensure riscv64 cross-compilation environment is ready (Linux only)
 ensure_riscv64_ready() {
     local arch
     arch=$(uname -m)
@@ -35,52 +34,64 @@ ensure_riscv64_ready() {
 
     if [ -d "${REPO_ROOT}/scripts" ]; then
         chmod +x "${REPO_ROOT}/scripts/setup_riscv64.sh" "${REPO_ROOT}/.cargo/run_riscv64.sh" 2>/dev/null || true
-        echo -e "  ${YELLOW}[第四章] 正在准备 riscv64 环境（target / QEMU / sysroot）...${NC}"
+        echo -e "  ${YELLOW}[Module 4] Preparing riscv64 environment (target / QEMU / sysroot)...${NC}"
         (cd "$REPO_ROOT" && bash scripts/setup_riscv64.sh) || exit 1
     fi
     export CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_RUNNER="bash ${REPO_ROOT}/.cargo/run_riscv64.sh"
 
     if ! command -v qemu-riscv64 >/dev/null 2>&1; then
-        echo -e "${RED}错误: 未找到 qemu-riscv64，无法在非 riscv64 主机上运行第四章测试。${NC}" >&2
-        echo "请安装 QEMU 用户态，例如：" >&2
+        echo -e "${RED}Error: qemu-riscv64 not found. Cannot run Module 4 tests on non-riscv64 host.${NC}" >&2
+        echo "Install QEMU user-mode, e.g.:" >&2
         echo "  Debian/Ubuntu: sudo apt-get install qemu-user-static" >&2
         echo "  Fedora:        sudo dnf install qemu-user-static" >&2
         exit 1
     fi
 
     if [ ! -d "$RISCV64_SYSROOT" ]; then
-        echo -e "${RED}错误: 未找到 riscv64 根文件系统: ${RISCV64_SYSROOT}${NC}" >&2
-        echo "请安装 riscv64 交叉工具链/库，例如：" >&2
+        echo -e "${RED}Error: riscv64 sysroot not found: ${RISCV64_SYSROOT}${NC}" >&2
+        echo "Install riscv64 cross toolchain, e.g.:" >&2
         echo "  Debian/Ubuntu: sudo apt-get install gcc-riscv64-linux-gnu" >&2
-        echo "或设置: export RISCV64_SYSROOT=/path/to/riscv64/sysroot" >&2
+        echo "Or set: export RISCV64_SYSROOT=/path/to/riscv64/sysroot" >&2
         exit 1
     fi
 }
 
+# Exercise list: "module:package:name"
 exercises=(
-    "01_concurrency_sync:thread_spawn:线程创建"
-    "01_concurrency_sync:mutex_counter:Mutex共享状态"
-    "01_concurrency_sync:channel:Channel通道"
-    "01_concurrency_sync:process_pipe:进程管道"
-    "02_no_std_dev:global_allocator_without_free:全局分配器(无释放)"
-    "02_no_std_dev:allocator_with_free:带释放的分配器"
-    "02_no_std_dev:raw_syscall:原始系统调用"
-    "02_no_std_dev:file_descriptor:文件描述符"
-    "03_os_concurrency:atomic_counter:原子计数器"
-    "03_os_concurrency:atomic_ordering:内存序"
-    "03_os_concurrency:spinlock:自旋锁"
-    "03_os_concurrency:spinlock_guard:RAII自旋锁守卫"
-    "03_os_concurrency:rwlock:读写锁(写者优先)"
-    "04_context_switch:stack_coroutine:有栈协程"
-    "04_context_switch:green_threads:绿色线程"
-    "05_async_programming:basic_future:手动实现Future"
-    "05_async_programming:tokio_tasks:Tokio异步任务"
-    "05_async_programming:async_channel_ex:异步通道"
-    "05_async_programming:select_timeout:Select与超时"
+    # Module 1: Concurrency (Synchronous)
+    "01_concurrency_sync:thread_spawn:Thread Creation"
+    "01_concurrency_sync:mutex_counter:Mutex Shared State"
+    "01_concurrency_sync:channel:Channel Communication"
+    "01_concurrency_sync:process_pipe:Process Pipes"
+    # Module 2: no_std Development
+    "02_no_std_dev:mem_primitives:Memory Primitives"
+    "02_no_std_dev:bump_allocator:Bump Allocator"
+    "02_no_std_dev:free_list_allocator:Free-List Allocator"
+    "02_no_std_dev:syscall_wrapper:Syscall Wrapper"
+    "02_no_std_dev:fd_table:File Descriptor Table"
+    # Module 3: OS Concurrency Advanced
+    "03_os_concurrency:atomic_counter:Atomic Counter"
+    "03_os_concurrency:atomic_ordering:Memory Ordering"
+    "03_os_concurrency:spinlock:Spinlock"
+    "03_os_concurrency:spinlock_guard:RAII Spinlock Guard"
+    "03_os_concurrency:rwlock:Read-Write Lock"
+    # Module 4: Context Switching
+    "04_context_switch:stack_coroutine:Stackful Coroutine"
+    "04_context_switch:green_threads:Green Threads"
+    # Module 5: Async Programming
+    "05_async_programming:basic_future:Manual Future"
+    "05_async_programming:tokio_tasks:Tokio Tasks"
+    "05_async_programming:async_channel_ex:Async Channel"
+    "05_async_programming:select_timeout:Select/Timeout"
+    # Module 6: Page Tables
+    "06_page_table:pte_flags:PTE Flags"
+    "06_page_table:page_table_walk:Page Table Walk"
+    "06_page_table:multi_level_pt:SV39 Multi-Level PT"
+    "06_page_table:tlb_sim:TLB Simulation"
 )
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}   OS Camp - Rust & OS 进阶实验检查${NC}"
+echo -e "${BLUE}   OSCamp Exercise Checker${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
@@ -93,7 +104,7 @@ for entry in "${exercises[@]}"; do
     if [ "$module" != "$current_module" ]; then
         current_module="$module"
         echo -e "\n${YELLOW}[$module]${NC}"
-        # 进入第四章前确保 riscv64 环境就绪
+        # Prepare riscv64 environment before Module 4
         if [ "$module" = "04_context_switch" ] && [ "$riscv64_ready" -eq 0 ]; then
             ensure_riscv64_ready
             riscv64_ready=1
@@ -104,7 +115,7 @@ for entry in "${exercises[@]}"; do
 
     if [ "$module" = "04_context_switch" ]; then
         if [ "$(uname -s)" = "Darwin" ]; then
-            echo -e "${YELLOW}SKIP (macOS 请用 Linux 或 cross)${NC}"
+            echo -e "${YELLOW}SKIP (macOS)${NC}"
             ((SKIP++))
         elif cargo test -p "$package" --target "$RISCV64_TARGET" --quiet -- --nocapture 2>/dev/null; then
             echo -e "${GREEN}PASS${NC}"
@@ -127,14 +138,14 @@ done
 echo ""
 echo -e "${BLUE}========================================${NC}"
 TOTAL=$((PASS + FAIL + SKIP))
-echo -e "  总计: ${GREEN}$PASS${NC} 通过 / ${RED}$FAIL${NC} 未通过 / ${YELLOW}$SKIP${NC} 跳过 / $TOTAL 总题"
-echo -e "  进度: $PASS/$TOTAL"
+echo -e "  Passed: ${GREEN}$PASS${NC} / Failed: ${RED}$FAIL${NC} / Skipped: ${YELLOW}$SKIP${NC} / Total: $TOTAL"
+echo -e "  Progress: $PASS/$TOTAL"
 echo -e "${BLUE}========================================${NC}"
 
 if [ $FAIL -eq 0 ]; then
-    echo -e "\n${GREEN}恭喜！所有练习全部通过！${NC}"
+    echo -e "\n${GREEN}Congratulations! All exercises passed!${NC}"
     exit 0
 else
-    echo -e "\n${YELLOW}还有 $FAIL 个练习需要完成，加油！${NC}"
+    echo -e "\n${YELLOW}$FAIL exercise(s) remaining. Keep going!${NC}"
     exit 1
 fi

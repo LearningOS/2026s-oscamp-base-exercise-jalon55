@@ -3,10 +3,6 @@
 version = 4
 
 [[package]]
-name = "allocator_with_free"
-version = "0.1.0"
-
-[[package]]
 name = "async_channel_ex"
 version = "0.1.0"
 dependencies = [
@@ -39,6 +35,10 @@ name = "bitflags"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
+
+[[package]]
+name = "bump_allocator"
+version = "0.1.0"
 
 [[package]]
 name = "bytes"
@@ -113,7 +113,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "file_descriptor"
+name = "fd_table"
 version = "0.1.0"
 
 [[package]]
@@ -128,6 +128,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "free_list_allocator"
+version = "0.1.0"
+
+[[package]]
 name = "fsevent-sys"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -135,10 +139,6 @@ checksum = "76ee7a02da4d231650c7cea31349b889be2f45ddb3ef3032d2ec8185f6313fd2"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "global_allocator_without_free"
-version = "0.1.0"
 
 [[package]]
 name = "green_threads"
@@ -231,6 +231,10 @@ name = "log"
 version = "0.4.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
+
+[[package]]
+name = "mem_primitives"
+version = "0.1.0"
 
 [[package]]
 name = "memchr"
@@ -356,10 +360,6 @@ checksum = "21b2ebcf727b7760c461f091f9f0f539b77b8e87f2fd88131e7f1b433b3cece4"
 dependencies = [
  "proc-macro2",
 ]
-
-[[package]]
-name = "raw_syscall"
-version = "0.1.0"
 
 [[package]]
 name = "redox_syscall"
@@ -513,6 +513,10 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
+
+[[package]]
+name = "syscall_wrapper"
+version = "0.1.0"
 
 [[package]]
 name = "thread_spawn"

@@ -1,4 +1,6 @@
 [package]
-name = "global_allocator_without_free"
+name = "free_list_allocator"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
