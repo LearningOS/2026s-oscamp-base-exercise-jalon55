@@ -100,103 +100,103 @@ name = "Memory Primitives (no_std)"
 package = "mem_primitives"
 path = "exercises/02_no_std_dev/01_mem_primitives/src/lib.rs"
 module = "no_std Development"
-description = "在 #![no_std] 环境下实现 memcpy/memset/memmove/strlen/strcmp 五个内存操作原语"
+description = "Implement memcpy/memset/memmove/strlen/strcmp memory primitives in a #![no_std] environment"
 hint = """
-通用思路：
-  - 所有函数都通过 unsafe 指针操作，用 ptr.add(i) 进行偏移访问
-  - 注意函数签名中的返回值要求（memcpy/memset/memmove 需返回 dst 指针）
+General approach:
+  - All functions operate via unsafe pointer arithmetic using ptr.add(i)
+  - Note the return value requirements (memcpy/memset/memmove must return the dst pointer)
 
 my_memmove vs my_memcpy:
-  - memcpy 可以直接逐字节正向复制
-  - memmove 需要处理 src 和 dst 内存重叠的情况
-  - 思考：当 dst 在 src 之后且有重叠时，正向复制会怎样？应该怎么办？
+  - memcpy can simply copy bytes forward one by one
+  - memmove must handle overlapping src and dst regions
+  - Think: what happens when dst is after src with overlap and you copy forward?
 
 my_strcmp:
-  - C 语言的 strcmp 返回值语义：相等返回 0，否则返回第一个不同字节的差值
-  - 别忘了处理两个字符串都到达 '\0' 的情况"""
+  - C strcmp semantics: return 0 if equal, otherwise the difference of the first differing byte
+  - Don't forget to handle the case where both strings reach '\\0'"""
 
 [[exercise]]
 name = "Bump Allocator (no_std core)"
 package = "bump_allocator"
 path = "exercises/02_no_std_dev/02_bump_allocator/src/lib.rs"
 module = "no_std Development"
-description = "用 core::alloc::GlobalAlloc 实现 Bump Allocator，使用 CAS 原子操作保证线程安全"
+description = "Implement a Bump Allocator with core::alloc::GlobalAlloc, using CAS atomics for thread safety"
 hint = """
-alloc 的核心步骤：
-  1. 读取当前分配位置 next
-  2. 根据 layout.align() 对齐（想想位运算怎么做向上对齐）
-  3. 检查对齐后的地址 + layout.size() 是否超出堆边界
-  4. 用 CAS (compare_exchange) 原子更新 next，失败则重试
+Core steps for alloc:
+  1. Load the current allocation position (next)
+  2. Align up according to layout.align() (think about the bit trick for rounding up)
+  3. Check that the aligned address + layout.size() does not exceed the heap boundary
+  4. Atomically update next with CAS (compare_exchange); retry on failure
 
-思考：
-  - 为什么不能用简单的 store 而必须用 CAS？（并发场景下会怎样？）
-  - 向上对齐的位运算公式：(addr + align - 1) & !(align - 1)，理解为什么有效
-  - dealloc 在 bump allocator 中通常是空操作，为什么？"""
+Think about:
+  - Why can't you use a simple store instead of CAS? (what happens under concurrency?)
+  - The align-up formula: (addr + align - 1) & !(align - 1) — why does it work?
+  - Why is dealloc typically a no-op in a bump allocator?"""
 
 [[exercise]]
 name = "Free-List Allocator"
 package = "free_list_allocator"
 path = "exercises/02_no_std_dev/03_free_list_allocator/src/lib.rs"
 module = "no_std Development"
-description = "在 Bump Allocator 基础上实现支持内存回收的 Free-List Allocator（侵入式链表）"
+description = "Build a Free-List Allocator on top of a Bump Allocator with an intrusive linked list for deallocation"
 hint = """
-alloc 策略（两级）：
-  1. 先遍历 free list 查找可复用的块（first-fit：大小够用且对齐满足）
-  2. 找到后从链表中摘除该节点并返回；找不到则回退到 bump 方式分配
-  - 摘除链表节点时，需要用"前驱指针"技巧来修改前一个节点的 next
+alloc strategy (two-level):
+  1. Walk the free list looking for a reusable block (first-fit: size sufficient and alignment met)
+  2. If found, unlink the node from the list and return it; otherwise fall back to bump allocation
+  - Unlinking requires the "previous pointer" technique to update the predecessor's next
 
-dealloc 策略：
-  - 将释放的内存块作为 FreeBlock 节点插入链表头部（头插法）
-  - FreeBlock 是侵入式节点：直接复用被释放内存的前几个字节存储 size 和 next
+dealloc strategy:
+  - Insert the freed block as a FreeBlock node at the head of the list (head insertion)
+  - FreeBlock is intrusive: it reuses the first bytes of the freed memory for size and next
 
-思考：
-  - 为什么 free list 节点可以直接存在被释放的内存里？最小块大小有什么要求？
-  - first-fit 与 best-fit 各有什么优缺点？"""
+Think about:
+  - Why can free list nodes live inside the freed memory? What's the minimum block size?
+  - What are the trade-offs between first-fit and best-fit?"""
 
 [[exercise]]
 name = "Syscall Wrapper"
 package = "syscall_wrapper"
 path = "exercises/02_no_std_dev/04_syscall_wrapper/src/lib.rs"
 module = "no_std Development"
-description = "描述 x86_64/aarch64/riscv64 三种架构的 Linux syscall ABI（指令、寄存器、调用号），并在当前平台实现真实 syscall"
+description = "Describe the Linux syscall ABI (instruction, registers, syscall numbers) for x86_64/aarch64/riscv64 and implement real syscalls on the current platform"
 hint = """
-ABI 知识部分：
-  - 搜索各架构的 syscall calling convention 文档
-  - x86_64: 参考 Linux 内核源码 arch/x86/entry/syscalls/ 或 man syscall(2)
-  - aarch64/riscv64: 它们共用 asm-generic 系统调用号表，编号与 x86_64 不同
-  - 思考：哪些架构的 syscall 指令会破坏额外的寄存器？为什么？
+ABI knowledge:
+  - Look up the syscall calling convention docs for each architecture
+  - x86_64: see Linux kernel arch/x86/entry/syscalls/ or man syscall(2)
+  - aarch64/riscv64: they share the asm-generic syscall number table, different from x86_64
+  - Think: which architectures' syscall instructions clobber extra registers? Why?
 
-syscall3 内联汇编：
-  - 查阅 Rust core::arch::asm! 文档中 inlateout / in / out 的用法
-  - x86_64 的 syscall 指令会隐式修改两个寄存器，需要用 out 声明
-  - aarch64 的返回值寄存器同时也是第一个参数寄存器，注意用 inlateout
+syscall3 inline assembly:
+  - Check the Rust core::arch::asm! docs for inlateout / in / out usage
+  - x86_64's syscall instruction implicitly clobbers two registers — declare them with out
+  - aarch64's return register is also the first argument register — use inlateout
 
-sys_write 等封装：
-  - 注意使用 NATIVE_SYS_* 常量（已按平台定义），而非硬编码数字
-  - buf.as_ptr() as usize 可将切片指针转为 syscall 需要的地址值"""
+sys_write and other wrappers:
+  - Use the NATIVE_SYS_* constants (already defined per platform), not hardcoded numbers
+  - buf.as_ptr() as usize converts a slice pointer to the address value syscall expects"""
 
 [[exercise]]
 name = "File Descriptor Table"
 package = "fd_table"
 path = "exercises/02_no_std_dev/05_fd_table/src/lib.rs"
 module = "no_std Development"
-description = "实现进程 fd 表：Vec<Option<Arc<dyn File>>>，支持分配/获取/关闭及最小空闲 fd 复用"
+description = "Implement a process fd table: Vec<Option<Arc<dyn File>>> with alloc/get/close and lowest-fd reuse"
 hint = """
-核心数据结构：
-  - 用 Vec<Option<...>> 表示 fd 表，索引就是 fd 编号
-  - None 表示该 fd 未使用，Some(...) 表示已分配
+Core data structure:
+  - Use Vec<Option<...>> to represent the fd table; the index IS the fd number
+  - None means the fd is unused, Some(...) means allocated
 
-alloc — 最小 fd 分配：
-  - POSIX 要求 open() 返回最小的可用 fd
-  - 先在已有槽位中找第一个 None；找不到再追加
+alloc — lowest fd allocation:
+  - POSIX requires open() to return the lowest available fd
+  - First scan existing slots for the first None; if not found, push a new entry
 
-get / close：
-  - 注意边界检查：fd 可能超出 Vec 长度
-  - close 是将槽位置为 None，而不是从 Vec 中删除（为什么？）
+get / close:
+  - Don't forget bounds checking: fd may exceed the Vec length
+  - close sets the slot to None rather than removing from the Vec (why?)
 
-思考：
-  - 为什么用 Arc<dyn File> 而不是 Box<dyn File>？（多个 fd 可以指向同一个文件）
-  - dup2 系统调用如何基于这个表实现？"""
+Think about:
+  - Why Arc<dyn File> instead of Box<dyn File>? (multiple fds can point to the same file)
+  - How would you implement dup2 on top of this table?"""
 
 # ============================================================
 #  Module 3: OS Concurrency Advanced

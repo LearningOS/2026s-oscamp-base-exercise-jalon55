@@ -1,0 +1,92 @@
+# CNB Cloud-Native CI Pipeline for OSCamp Base Exercises
+# Push / PR triggers fetch scoring script from private repo and run it
+# "$: vscode:" enables cloud-native development (WebIDE)
+#
+# Scoring script is hosted in a separate private repo to prevent tampering:
+#   LearningOS/OSCamp-2026S/oscamp-base-ci (contains scoring.sh)
+# Secrets (OSCAMP_TOKEN, OSCAMP_COURSE_ID) are imported from:
+#   LearningOS/OSCamp-2026S/keys/oscamp-base-secrets.yml
+
+main:
+  push:
+    - docker:
+        image: rust:latest
+      env:
+        CARGO_TERM_COLOR: always
+        TZ: Asia/Shanghai
+      imports: https://cnb.cool/LearningOS/OSCamp-2026S/keys/-/blob/main/oscamp-base-secrets.yml
+      stages:
+        - name: Install tools
+          script: apt-get update && apt-get install -y jq gcc-riscv64-linux-gnu qemu-user-static
+
+        - name: Setup riscv64 target
+          script: rustup target add riscv64gc-unknown-linux-gnu
+
+        - name: Fetch and run scoring script
+          script: |
+            git clone --depth 1 https://cnb.cool/LearningOS/OSCamp-2026S/oscamp-base-ci.git /tmp/ci
+            chmod +x /tmp/ci/scoring.sh
+            bash /tmp/ci/scoring.sh
+
+        - name: Post score to OpenCamp
+          script: |
+            SCORE=$(jq -r '.statistics.total_score' .ide/result/check_result.json)
+            echo "Score: $SCORE / 100"
+            curl -X POST "https://api.opencamp.cn/web/api/courseRank/createByThirdToken" \
+              -H 'accept: application/json;charset=utf-8' \
+              -H 'Content-Type: application/json' \
+              -H "token: $OSCAMP_TOKEN" \
+              -d "{\"channel\": \"cnb\", \"courseId\": $OSCAMP_COURSE_ID, \"ext\": \"{}\", \"name\": \"$CNB_BUILD_USER\", \"score\": $SCORE, \"totalScore\": 100}" \
+              --fail --show-error
+
+  pull_request.target:
+    - docker:
+        image: rust:latest
+      env:
+        CARGO_TERM_COLOR: always
+        TZ: Asia/Shanghai
+      imports: https://cnb.cool/LearningOS/OSCamp-2026S/keys/-/blob/main/oscamp-base-secrets.yml
+      stages:
+        - name: Fetch PR code
+          script: |
+            git remote add source ${CNB_WEB_ENDPOINT}/${CNB_PULL_REQUEST_SLUG}.git
+            git fetch source $CNB_PULL_REQUEST_BRANCH
+            git checkout -f $CNB_PULL_REQUEST_SHA
+
+        - name: Install tools
+          script: apt-get update && apt-get install -y jq gcc-riscv64-linux-gnu qemu-user-static
+
+        - name: Setup riscv64 target
+          script: rustup target add riscv64gc-unknown-linux-gnu
+
+        - name: Fetch and run scoring script
+          script: |
+            git clone --depth 1 https://cnb.cool/LearningOS/OSCamp-2026S/oscamp-base-ci.git /tmp/ci
+            chmod +x /tmp/ci/scoring.sh
+            bash /tmp/ci/scoring.sh
+
+        - name: Post score to OpenCamp
+          script: |
+            SCORE=$(jq -r '.statistics.total_score' .ide/result/check_result.json)
+            echo "Score: $SCORE / 100"
+            curl -X POST "https://api.opencamp.cn/web/api/courseRank/createByThirdToken" \
+              -H 'accept: application/json;charset=utf-8' \
+              -H 'Content-Type: application/json' \
+              -H "token: $OSCAMP_TOKEN" \
+              -d "{\"channel\": \"cnb\", \"courseId\": $OSCAMP_COURSE_ID, \"ext\": \"{}\", \"name\": \"$CNB_BUILD_USER\", \"score\": $SCORE, \"totalScore\": 100}" \
+              --fail --show-error
+
+# Cloud-native development (WebIDE)
+$:
+  vscode:
+    - docker:
+        build: .ide/Dockerfile
+        image: rust:latest
+      services:
+        - vscode
+        - docker
+      stages:
+        - name: Setup environment
+          script: |
+            rustup target add riscv64gc-unknown-linux-gnu
+            echo "Environment ready. Run 'bash check.sh' to check your progress."

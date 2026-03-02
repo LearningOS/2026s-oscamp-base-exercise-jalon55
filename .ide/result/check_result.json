@@ -1,0 +1,36 @@
+{
+  "exercises": [
+    {"package": "thread_spawn", "score": 0, "max": 3, "status": "pending"},
+    {"package": "mutex_counter", "score": 0, "max": 4, "status": "pending"},
+    {"package": "channel", "score": 0, "max": 4, "status": "pending"},
+    {"package": "process_pipe", "score": 0, "max": 4, "status": "pending"},
+    {"package": "mem_primitives", "score": 0, "max": 4, "status": "pending"},
+    {"package": "bump_allocator", "score": 0, "max": 5, "status": "pending"},
+    {"package": "free_list_allocator", "score": 0, "max": 5, "status": "pending"},
+    {"package": "syscall_wrapper", "score": 0, "max": 5, "status": "pending"},
+    {"package": "fd_table", "score": 0, "max": 5, "status": "pending"},
+    {"package": "atomic_counter", "score": 0, "max": 4, "status": "pending"},
+    {"package": "atomic_ordering", "score": 0, "max": 4, "status": "pending"},
+    {"package": "spinlock", "score": 0, "max": 4, "status": "pending"},
+    {"package": "spinlock_guard", "score": 0, "max": 4, "status": "pending"},
+    {"package": "rwlock", "score": 0, "max": 5, "status": "pending"},
+    {"package": "stack_coroutine", "score": 0, "max": 6, "status": "pending"},
+    {"package": "green_threads", "score": 0, "max": 6, "status": "pending"},
+    {"package": "basic_future", "score": 0, "max": 4, "status": "pending"},
+    {"package": "tokio_tasks", "score": 0, "max": 3, "status": "pending"},
+    {"package": "async_channel_ex", "score": 0, "max": 3, "status": "pending"},
+    {"package": "select_timeout", "score": 0, "max": 4, "status": "pending"},
+    {"package": "pte_flags", "score": 0, "max": 3, "status": "pending"},
+    {"package": "page_table_walk", "score": 0, "max": 4, "status": "pending"},
+    {"package": "multi_level_pt", "score": 0, "max": 4, "status": "pending"},
+    {"package": "tlb_sim", "score": 0, "max": 3, "status": "pending"}
+  ],
+  "statistics": {
+    "total_exercitations": 24,
+    "total_succeeds": 0,
+    "total_failures": 24,
+    "total_score": 0,
+    "total_possible": 100
+  },
+  "user": null
+}
