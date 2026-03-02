@@ -72,8 +72,8 @@ extern "C" fn thread_wrapper() {
 /// Save current callee-saved regs into `old`, load from `new`, then `ret` to `new.ra`.
 /// Zero `a0`/`a1` before `ret` so we don't leak pointers into the new context.
 ///
-/// Must be `#[naked]` to prevent the compiler from generating a prologue/epilogue.
-#[naked]
+/// Must be `#[unsafe(naked)]` to prevent the compiler from generating a prologue/epilogue.
+#[unsafe(naked)]
 unsafe extern "C" fn switch_context(_old: &mut TaskContext, _new: &TaskContext) {
     naked_asm!(
         "sd sp, 0(a0)",

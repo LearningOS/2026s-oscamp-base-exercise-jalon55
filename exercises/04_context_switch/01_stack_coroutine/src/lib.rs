@@ -69,8 +69,10 @@ impl TaskContext {
 /// Switch from `old` to `new` context: save current callee-saved regs into `old`, load from `new`, then `ret` (jumps to `new.ra`).
 ///
 /// In asm: store `sp`, `ra`, `s0`–`s11` to `[a0]` (old), load from `[a1]` (new), zero `a0`/`a1` so we do not leak pointers into the new context, then `ret`.
+///
+/// Must be `#[unsafe(naked)]` to prevent the compiler from generating a prologue/epilogue.
 pub unsafe fn switch_context(old: &mut TaskContext, new: &TaskContext) {
-    todo!("save callee-saved regs to old, load from new, then ret; see module doc for riscv64 ABI and layout")
+    todo!("save callee-saved regs to old, load from new, then ret; use #[unsafe(naked)] + naked_asm!, see module doc for riscv64 ABI and layout")
 }
 
 const STACK_SIZE: usize = 1024 * 64;
