@@ -143,7 +143,12 @@ mod tests {
             let mut guard = l.lock();
             *guard = 42;
             panic!("intentional panic");
+<<<<<<< HEAD
         }).join();
+=======
+        })
+        .join();
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 
         assert!(result.is_err());
         // Even if thread panics, guard's Drop should release lock

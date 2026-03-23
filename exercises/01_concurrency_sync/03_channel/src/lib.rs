@@ -53,11 +53,22 @@ mod tests {
     #[test]
     fn test_multi_producer() {
         let result = multi_producer(3);
+<<<<<<< HEAD
         assert_eq!(result, vec![
             "msg from 0".to_string(),
             "msg from 1".to_string(),
             "msg from 2".to_string(),
         ]);
+=======
+        assert_eq!(
+            result,
+            vec![
+                "msg from 0".to_string(),
+                "msg from 1".to_string(),
+                "msg from 2".to_string(),
+            ]
+        );
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
     }
 
     #[test]

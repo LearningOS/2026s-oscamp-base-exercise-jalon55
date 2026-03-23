@@ -31,13 +31,21 @@
 //! Each function includes a `TODO` comment indicating where you need to write code.
 //! Run `cargo test` to check your implementations.
 
+<<<<<<< HEAD
 use std::collections::hash_map::Values;
+=======
+#[allow(unused_imports)]
+use std::cell::RefCell;
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 #[allow(unused_imports)]
 use std::thread;
 #[allow(unused_imports)]
 use std::time::Duration;
+<<<<<<< HEAD
 #[allow(unused_imports)]
 use std::cell::RefCell;
+=======
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 
 // ============================================================================
 // Example Code: Advanced Thread Patterns
@@ -158,12 +166,16 @@ pub fn double_in_thread(numbers: Vec<i32>) -> Vec<i32> {
     // TODO: Create a new thread to multiply each element of numbers by 2
     // Use thread::spawn and move closure
     // Use join().unwrap() to get result
+<<<<<<< HEAD
     let handle = thread::spawn(move||{
         let result = numbers.into_iter().map(|x| x*2).collect();
         result
     });
     let result =handle.join().unwrap();
      result
+=======
+    todo!()
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 }
 
 /// Sum two vectors in parallel, returning a tuple of two sums.
@@ -173,6 +185,7 @@ pub fn double_in_thread(numbers: Vec<i32>) -> Vec<i32> {
 pub fn parallel_sum(a: Vec<i32>, b: Vec<i32>) -> (i32, i32) {
     // TODO: Create two threads to sum a and b respectively
     // Join both threads to get results
+<<<<<<< HEAD
     let (sum_a,sum_b)= thread::scope(move|s|{
         let h1=s.spawn(move||a.iter().sum::<i32>());
         let h2=s.spawn(move||b.iter().sum::<i32>());
@@ -180,6 +193,9 @@ pub fn parallel_sum(a: Vec<i32>, b: Vec<i32>) -> (i32, i32) {
     });
     (sum_a,sum_b)
     
+=======
+    todo!()
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 }
 
 // ============================================================================
@@ -197,6 +213,7 @@ pub fn named_sleeper(value: i32, ms: u64) -> i32 {
     // TODO: Create a thread builder with name "sleeper"
     // TODO: Spawn a thread that sleeps for `ms` milliseconds and returns `value`
     // TODO: Join the thread and return the value
+<<<<<<< HEAD
     let builder = thread::Builder::new()
         .name("sleeper".into());
     
@@ -207,6 +224,9 @@ pub fn named_sleeper(value: i32, ms: u64) -> i32 {
 
     handle.join().unwrap()
 
+=======
+    todo!()
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 }
 
 thread_local! {
@@ -221,12 +241,16 @@ thread_local! {
 /// Hint: Use `THREAD_COUNT.with(|cell| { ... })` to access the thread‑local variable.
 pub fn increment_thread_local() -> usize {
     // TODO: Use THREAD_COUNT.with to increment and return the new count
+<<<<<<< HEAD
     THREAD_COUNT.with(|cell|{
         let mut count = cell.borrow_mut();
         *count += 1;
         *count  // 没有分号，所以这是闭包的返回值
     })
 
+=======
+    todo!()
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 }
 
 /// Spawn two threads using a **scoped thread** to compute the sum of two slices without moving ownership.
@@ -242,12 +266,16 @@ pub fn scoped_slice_sum(a: &[i32], b: &[i32]) -> (i32, i32) {
     // TODO: Use thread::scope to spawn two threads
     // TODO: Each thread sums its slice
     // TODO: Wait for both threads and return the results
+<<<<<<< HEAD
     let(sum_a,sum_b)=thread::scope(|s|{
         let h1=s.spawn(move||a.iter().sum::<i32>());
         let h2=s.spawn(move||b.iter().sum::<i32>());
         (h1.join().unwrap(),h2.join().unwrap())
     });
     (sum_a,sum_b)
+=======
+    todo!()
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 }
 
 /// Handle a possible panic in a spawned thread.
@@ -264,6 +292,7 @@ pub fn scoped_slice_sum(a: &[i32], b: &[i32]) -> (i32, i32) {
 pub fn handle_panic(value: i32, should_panic: bool) -> Result<i32, ()> {
     // TODO: Spawn a thread that either panics or returns value
     // TODO: Join and map the result appropriately
+<<<<<<< HEAD
     let handle = thread::spawn(move||{
         if should_panic{
             panic!("oops");
@@ -277,6 +306,9 @@ pub fn handle_panic(value: i32, should_panic: bool) -> Result<i32, ()> {
     }
 
 
+=======
+    todo!()
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 }
 
 #[cfg(test)]

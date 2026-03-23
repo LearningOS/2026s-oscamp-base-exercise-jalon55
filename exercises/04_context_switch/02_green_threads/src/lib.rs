@@ -223,7 +223,14 @@ mod tests {
 
         let got = EXEC_ORDER.load(Ordering::SeqCst);
         if got != 122 {
+<<<<<<< HEAD
             panic!("EXEC_ORDER: expected 122, got {} (run with --nocapture to see stderr)", got);
+=======
+            panic!(
+                "EXEC_ORDER: expected 122, got {} (run with --nocapture to see stderr)",
+                got
+            );
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
         }
     }
 

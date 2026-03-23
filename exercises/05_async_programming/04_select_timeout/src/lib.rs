@@ -49,10 +49,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_timeout_expired() {
+<<<<<<< HEAD
         let result = with_timeout(async {
             sleep(Duration::from_millis(200)).await;
             42
         }, 50).await;
+=======
+        let result = with_timeout(
+            async {
+                sleep(Duration::from_millis(200)).await;
+                42
+            },
+            50,
+        )
+        .await;
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
         assert_eq!(result, None);
     }
 
@@ -67,7 +78,12 @@ mod tests {
                 sleep(Duration::from_millis(200)).await;
                 "slow"
             },
+<<<<<<< HEAD
         ).await;
+=======
+        )
+        .await;
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
         assert_eq!(result, "fast");
     }
 
@@ -82,7 +98,12 @@ mod tests {
                 sleep(Duration::from_millis(10)).await;
                 "fast"
             },
+<<<<<<< HEAD
         ).await;
+=======
+        )
+        .await;
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
         assert_eq!(result, "fast");
     }
 }

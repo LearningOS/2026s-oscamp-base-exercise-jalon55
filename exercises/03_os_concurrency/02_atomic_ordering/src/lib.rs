@@ -15,10 +15,17 @@
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
+<<<<<<< HEAD
     /// Use Release-Acquire semantics to safely pass data between two threads.
     ///
     /// `produce` writes data first, then sets flag with Release;
     /// `consume` reads flag with Acquire, ensuring it sees the data.
+=======
+/// Use Release-Acquire semantics to safely pass data between two threads.
+///
+/// `produce` writes data first, then sets flag with Release;
+/// `consume` reads flag with Acquire, ensuring it sees the data.
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 pub struct FlagChannel {
     data: AtomicU32,
     ready: AtomicBool,
@@ -108,9 +115,13 @@ mod tests {
             ch2.produce(42);
         });
 
+<<<<<<< HEAD
         let consumer = thread::spawn(move || {
             ch.consume()
         });
+=======
+        let consumer = thread::spawn(move || ch.consume());
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 
         producer.join().unwrap();
         let val = consumer.join().unwrap();

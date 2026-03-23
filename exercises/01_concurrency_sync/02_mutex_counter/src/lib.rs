@@ -7,7 +7,10 @@
 //! - `Arc<T>` atomic reference counting enables cross-thread sharing
 //! - `lock()` acquires the lock and accesses data
 
+<<<<<<< HEAD
 use std::arch::x86_64;
+=======
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -21,6 +24,7 @@ pub fn concurrent_counter(n_threads: usize, count_per_thread: usize) -> usize {
     // TODO: Spawn n_threads threads
     // TODO: In each thread, lock() and increment count_per_thread times
     // TODO: Join all threads, return final value
+<<<<<<< HEAD
     let counter = Arc::new(Mutex::new(0));
     let mut handles = vec![];
     for _ in 0..n_threads {
@@ -43,6 +47,9 @@ pub fn concurrent_counter(n_threads: usize, count_per_thread: usize) -> usize {
 
     let x = *counter.lock().unwrap();
     x
+=======
+    todo!()
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 }
 
 /// Add elements to a shared vector concurrently using multiple threads.

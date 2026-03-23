@@ -1,0 +1,152 @@
+name: GitHub Classroom Workflow
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'README.md'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    name: Autograding
+    runs-on: ubuntu-latest
+    container:
+      image: rust:latest
+    outputs:
+      details: ${{ steps.autograding.outputs.details }}
+      points: ${{ steps.autograding.outputs.points }}
+    env:
+      OUTPUT: .github/result/check_result.json
+      SUMMARY: .github/result/summary.json
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: apt-get update && apt-get install -y jq gcc-riscv64-linux-gnu qemu-user-static
+
+      - name: Setup riscv64 target
+        run: rustup target add riscv64gc-unknown-linux-gnu
+
+      - name: Run scoring
+        run: |
+          RISCV64_TARGET="riscv64gc-unknown-linux-gnu"
+          RISCV64_SYSROOT="${RISCV64_SYSROOT:-/usr/riscv64-linux-gnu}"
+          export CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_RUNNER="qemu-riscv64 -L $RISCV64_SYSROOT"
+
+          TOTAL_SCORE=0
+          PASS=0
+          FAIL=0
+          RESULTS="[]"
+
+          run_test() {
+            local pkg=$1 target=$2
+            if [ "$target" = "riscv64" ]; then
+              cargo test -p "$pkg" --target "$RISCV64_TARGET" --quiet 2>/dev/null
+            else
+              cargo test -p "$pkg" --quiet 2>/dev/null
+            fi
+          }
+
+          check() {
+            local pkg=$1 score=$2 target=${3:-default}
+            printf "  %-25s [%2d pts]  " "$pkg" "$score"
+            if run_test "$pkg" "$target"; then
+              echo "PASS (+$score)"
+              TOTAL_SCORE=$((TOTAL_SCORE + score))
+              PASS=$((PASS + 1))
+              RESULTS=$(echo "$RESULTS" | jq --arg p "$pkg" --arg s "$score" \
+                '. + [{"package":$p,"score":($s|tonumber),"max":($s|tonumber),"status":"pass"}]')
+            else
+              echo "FAIL"
+              FAIL=$((FAIL + 1))
+              RESULTS=$(echo "$RESULTS" | jq --arg p "$pkg" --arg s "$score" \
+                '. + [{"package":$p,"score":0,"max":($s|tonumber),"status":"fail"}]')
+            fi
+          }
+
+          echo "========================================="
+          echo "   OSCamp Exercise Scoring"
+          echo "========================================="
+
+          # Module 1: Concurrency (15 pts)
+          check thread_spawn        3
+          check mutex_counter       4
+          check channel             4
+          check process_pipe        4
+          # Module 2: no_std (24 pts)
+          check mem_primitives      4
+          check bump_allocator      5
+          check free_list_allocator 5
+          check syscall_wrapper     5
+          check fd_table            5
+          # Module 3: OS Concurrency (21 pts)
+          check atomic_counter      4
+          check atomic_ordering     4
+          check spinlock            4
+          check spinlock_guard      4
+          check rwlock              5
+          # Module 4: Context Switch (12 pts)
+          check stack_coroutine     6  riscv64
+          check green_threads       6  riscv64
+          # Module 5: Async (14 pts)
+          check basic_future        4
+          check tokio_tasks         3
+          check async_channel_ex    3
+          check select_timeout      4
+          # Module 6: Page Tables (14 pts)
+          check pte_flags           3
+          check page_table_walk     4
+          check multi_level_pt      4
+          check tlb_sim             3
+
+          TOTAL=$((PASS + FAIL))
+          echo "========================================="
+          echo "  Passed: $PASS / Failed: $FAIL / Total: $TOTAL"
+          echo "  Score:  $TOTAL_SCORE / 100"
+          echo "========================================="
+
+          mkdir -p .github/result
+          echo "$RESULTS" | jq '{
+            exercises: [.[] | {name: .package, result: (.status == "pass")}],
+            statistics: {
+              total_exercations: '"$TOTAL"',
+              total_succeeds: '"$PASS"',
+              total_failures: '"$FAIL"',
+              total_score: '"$TOTAL_SCORE"',
+              total_possible: 100
+            }
+          }' > $OUTPUT
+
+      - uses: yfblock/os-autograding@master
+        id: autograding
+        with:
+          outputFile: ${{ env.OUTPUT }}
+
+      - name: Generate summary JSON
+        run: |
+          total_score=$(jq '.statistics.total_score' $OUTPUT)
+          new_json=$(jq -n \
+            --arg channel "github" \
+            --argjson courseId "${{ secrets.OSCAMP_COURSE_ID }}" \
+            --arg ext "{}" \
+            --arg name "${{ github.actor }}" \
+            --argjson score "$total_score" \
+            --argjson totalScore 100 \
+            '{channel: $channel, courseId: $courseId, ext: $ext, name: $name, score: $score, totalScore: $totalScore}')
+          echo "$new_json" > $SUMMARY
+          cat $SUMMARY
+
+      - name: Post score to OpenCamp
+        run: |
+          curl -X POST "https://api.opencamp.cn/web/api/courseRank/createByThirdToken" \
+            -H "accept: application/json;charset=utf-8" \
+            -H "Content-Type: application/json" \
+            -H "token: ${{ secrets.OSCAMP_TOKEN }}" \
+            -d @$SUMMARY \
+            -v

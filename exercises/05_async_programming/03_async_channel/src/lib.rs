@@ -54,11 +54,22 @@ mod tests {
     #[tokio::test]
     async fn test_fan_in() {
         let result = fan_in(3).await;
+<<<<<<< HEAD
         assert_eq!(result, vec![
             "producer 0: message",
             "producer 1: message",
             "producer 2: message",
         ]);
+=======
+        assert_eq!(
+            result,
+            vec![
+                "producer 0: message",
+                "producer 1: message",
+                "producer 2: message",
+            ]
+        );
+>>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
     }
 
     #[tokio::test]
