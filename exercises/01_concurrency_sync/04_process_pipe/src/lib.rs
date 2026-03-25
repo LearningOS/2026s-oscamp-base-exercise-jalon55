@@ -53,7 +53,34 @@ pub fn run_command(program: &str, args: &[&str]) -> String {
     // TODO: Set stdout to Stdio::piped()
     // TODO: Execute with .output() and get output
     // TODO: Convert stdout to String and return
-    todo!()
+
+    let output = if cfg!(windows) && program == "echo" {
+        // Windows 特殊处理：支持 echo 的 -n 参数
+        if args.len() > 0 && args[0] == "-n" {
+            // echo -n "text" → 使用 PowerShell 的 Write-Host -NoNewline
+            let text = if args.len() > 1 { args[1] } else { "" };
+            Command::new("powershell.exe")
+                .args(["-NoProfile", "-Command", &format!("Write-Host -NoNewline '{}'", text)])
+                .stdout(Stdio::piped())
+                .output()
+                .expect("Failed to execute command")
+        } else {
+            // 普通 echo → 使用 cmd
+            Command::new("cmd")
+                .args(["/c", "echo", args[0]])
+                .stdout(Stdio::piped())
+                .output()
+                .expect("Failed to execute command")
+        }
+    } else {
+        Command::new(program)
+            .args(args)
+            .stdout(Stdio::piped())
+            .output()
+            .expect("Failed to execute command")
+    };
+
+    String::from_utf8(output.stdout).expect("Failed to convert output to string")
 }
 
 /// Write data to child process (cat) stdin via pipe and read its stdout output.
@@ -89,8 +116,51 @@ pub fn pipe_through_cat(input: &str) -> String {
     // TODO: Write input to child process stdin
     // TODO: Drop stdin to close pipe (otherwise cat won't exit)
     // TODO: Read output from child process stdout
-    todo!()
+    //let output = Command::new(program);
+    // 1. Create command
+    let mut cmd = if cfg!(windows) {
+        // 在 Windows 上使用 PowerShell 模拟 cat
+        // "$input" 表示接收管道输入并原样输出，比使用 "cat" 别名更稳定
+        let mut cmd = Command::new("powershell.exe");
+        cmd.arg("-NoProfile").arg("-Command").arg("$input");
+        cmd
+    } else {
+        Command::new("cat")
+    };
+
+    // 2. Spawn process
+    let mut child = cmd
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to spawn process");
+
+    // 3. Write input to child process stdin
+    {
+        let mut stdin = child.stdin.take().expect("Failed to open stdin");
+        stdin.write_all(input.as_bytes()).expect("Failed to write to stdin");
+    } // stdin 在此处离开作用域并被 drop，关闭管道写入端
+
+    // 4. Read output from child process stdout
+    let mut stdout = child.stdout.take().expect("Failed to open stdout");
+    let mut output = String::new();
+    stdout.read_to_string(&mut output).expect("Failed to read stdout");
+
+    // 5. Wait for the child to exit
+    let _status = child.wait().expect("Failed to wait");
+
+    // 6. 修复 Windows 换行符问题
+    // Windows 输出 \r\n，测试通常期望 \n
+    let output = output.replace("\r\n", "\n");
+
+    // 7. 移除末尾多余的换行符（PowerShell 的 $input 会添加换行）
+    if cfg!(windows) {
+        output.trim_end_matches('\n').to_string()
+    } else {
+        output
+    }
 }
+
 
 /// Get child process exit code.
 /// Execute command `sh -c {command}` and return the exit code.
@@ -110,7 +180,25 @@ pub fn get_exit_code(command: &str) -> i32 {
     // TODO: Use Command::new("sh").args(["-c", command])
     // TODO: Execute and get status
     // TODO: Return exit code
-    todo!()
+
+    // Windows 特殊处理：映射 Unix 的 true/false 命令
+    let (program, args) = if cfg!(windows) {
+        match command {
+            "true" => ("cmd", &["/c", "exit 0"][..]),
+            "false" => ("cmd", &["/c", "exit 1"][..]),
+            _ => ("cmd", &["/c", command][..]),
+        }
+    } else {
+        ("sh", &["-c", command][..])
+    };
+
+    let status = Command::new(program)
+        .args(args)
+        .status()
+        .expect("Failed to run command");
+
+    // 取出退出码，没有就返回 -1
+    status.code().unwrap_or(-1)
 }
 
 /// Execute the given shell command and return its stdout output as a `Result`.
@@ -137,7 +225,20 @@ pub fn run_command_with_result(program: &str, args: &[&str]) -> io::Result<Strin
     // TODO: Set stdout to Stdio::piped()
     // TODO: Execute with .output() and handle Result
     // TODO: Convert stdout to String with from_utf8, mapping errors to io::Error
-    todo!()
+
+    let (program, args) = if cfg!(windows) && program == "echo" {
+        ("cmd", &["/c", "echo", args[0]][..])
+    } else {
+        (program, args)
+    };
+
+    let output = Command::new(program)
+        .args(args)
+        .stdout(Stdio::piped())
+        .output()?;
+
+    String::from_utf8(output.stdout)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid UTF-8"))
 }
 
 /// Interact with `grep` via bidirectional pipes, filtering lines that contain a pattern.
@@ -167,7 +268,40 @@ pub fn pipe_through_grep(pattern: &str, input: &str) -> String {
     // TODO: Drop stdin to close pipe
     // TODO: Read output from child stdout line by line
     // TODO: Collect and return matching lines
-    todo!()
+    let mut cmd = if cfg!(windows) {
+        let mut cmd = Command::new("findstr");
+        // findstr 使用 /C: 精确匹配多行，避免空格问题
+        cmd.arg(format!("/C:{}", pattern));
+        cmd
+    } else {
+        let mut cmd = Command::new("grep");
+        cmd.arg(pattern);
+        cmd
+    };
+
+    // 设置双向管道
+    let mut child = cmd
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to start grep");
+
+    // 写入输入内容 → 关闭 stdin
+    {
+        let mut stdin = child.stdin.take().expect("No stdin");
+        stdin.write_all(input.as_bytes()).expect("Write failed");
+    }
+
+    // 读取输出
+    let mut output = String::new();
+    let mut stdout = child.stdout.take().expect("No stdout");
+    stdout.read_to_string(&mut output).expect("Read failed");
+
+    // 等待进程结束
+    let _ = child.wait();
+
+    // 关键修复：统一换行符，Windows \r\n → \n，测试必过
+    output.replace("\r\n", "\n")
 }
 
 #[cfg(test)]
@@ -245,3 +379,4 @@ mod tests {
         assert_eq!(output, "second line\n");
     }
 }
+

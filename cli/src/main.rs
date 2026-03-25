@@ -67,13 +67,9 @@ fn load_exercises() -> Vec<Exercise> {
             return config.exercise;
         }
     }
-<<<<<<< HEAD
-    eprintln!("{RED}Error:{RESET} Could not find exercises.toml, please run in project root directory");
-=======
     eprintln!(
         "{RED}Error:{RESET} Could not find exercises.toml, please run in project root directory"
     );
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
     std::process::exit(1);
 }
 
@@ -204,14 +200,10 @@ fn watch_mode(exercises: &[Exercise]) {
             rprintln(&mut stdout, "");
             rprintln(
                 &mut stdout,
-<<<<<<< HEAD
-                &format!("  {YELLOW}⏳ Testing {}...{RESET}", exercises[current].package),
-=======
                 &format!(
                     "  {YELLOW}⏳ Testing {}...{RESET}",
                     exercises[current].package
                 ),
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
             );
             stdout.flush().unwrap();
 
@@ -224,14 +216,10 @@ fn watch_mode(exercises: &[Exercise]) {
                 render_header(&mut stdout, exercises, current, count_done(&done));
                 rprintln(
                     &mut stdout,
-<<<<<<< HEAD
-                    &format!("\n  {BOLD}{GREEN}✅ Exercise '{}' passed!{RESET}", exercises[current].name),
-=======
                     &format!(
                         "\n  {BOLD}{GREEN}✅ Exercise '{}' passed!{RESET}",
                         exercises[current].name
                     ),
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
                 );
 
                 if let Some(next) = find_next_incomplete(&done, current) {
@@ -372,27 +360,19 @@ fn render_header(out: &mut impl Write, exercises: &[Exercise], current: usize, d
     let ex = &exercises[current];
     let bar = progress_bar(done, total, 20);
 
-<<<<<<< HEAD
-    rprintln(out, &format!("{BOLD}{BLUE}─── OS Camp ─── Rust & OS Advanced Experiments ───{RESET}"));
-=======
     rprintln(
         out,
         &format!("{BOLD}{BLUE}─── OS Camp ─── Rust & OS Advanced Experiments ───{RESET}"),
     );
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
     rprintln(out, &format!("  Progress: {bar}"));
     rprintln(out, "");
     rprintln(
         out,
-<<<<<<< HEAD
-        &format!("  {BOLD}▶ Exercise {}/{total}: {}{RESET}", current + 1, ex.name),
-=======
         &format!(
             "  {BOLD}▶ Exercise {}/{total}: {}{RESET}",
             current + 1,
             ex.name
         ),
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
     );
     rprintln(out, &format!("    {DIM}Module:{RESET} {}", ex.module));
     rprintln(out, &format!("    {CYAN}{}{RESET}", ex.description));
@@ -416,14 +396,10 @@ fn render_failure(out: &mut impl Write, result: &TestResult) {
 
 fn render_controls(out: &mut impl Write) {
     rprintln(out, "");
-<<<<<<< HEAD
-    rprintln(out, &format!("{DIM}  ─────────────────────────────────────────{RESET}"));
-=======
     rprintln(
         out,
         &format!("{DIM}  ─────────────────────────────────────────{RESET}"),
     );
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
     rprintln(
         out,
         &format!(
@@ -462,16 +438,12 @@ fn render_list(out: &mut impl Write, exercises: &[Exercise], current: usize, don
         };
         rprintln(
             out,
-<<<<<<< HEAD
-            &format!("  {marker} {status} {:2}. {:<22} ({DIM}{}{RESET})", i + 1, ex.name, ex.package),
-=======
             &format!(
                 "  {marker} {status} {:2}. {:<22} ({DIM}{}{RESET})",
                 i + 1,
                 ex.name,
                 ex.package
             ),
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
         );
     }
 }
@@ -612,20 +584,12 @@ fn print_usage() {
     println!("{BOLD}{BLUE}OS Camp{RESET} - Rust & OS Advanced Experiments\n");
     println!("Usage: oscamp [command]\n");
     println!("Commands:");
-<<<<<<< HEAD
-    println!("  {BOLD}watch{RESET}    Interactive exercise mode (default) - real-time file monitoring");
-=======
     println!(
         "  {BOLD}watch{RESET}    Interactive exercise mode (default) - real-time file monitoring"
     );
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
     println!("  {BOLD}list{RESET}     View completion status of all exercises");
     println!("  {BOLD}check{RESET}    Check all exercises in batch");
     println!("  {BOLD}run{RESET}      Run specified exercise  (oscamp run <package>)");
     println!("  {BOLD}hint{RESET}     View exercise hint  (oscamp hint <package>)");
     println!("  {BOLD}help{RESET}     Show this help message");
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd

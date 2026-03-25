@@ -18,7 +18,19 @@ pub fn simple_send_recv(items: Vec<String>) -> Vec<String> {
     // TODO: Spawn thread to send each element in items
     // TODO: In main thread, receive all messages and collect into Vec
     // Hint: When all Senders are dropped, recv() returns Err
-    todo!()
+    let (tx,rx)=mpsc::channel();
+    thread::spawn(move||{
+        for item in items{
+            tx.send(item).unwrap();
+        }
+    });
+    let mut received_items = Vec::new();
+
+    while let Ok(item) = rx.recv() {
+        received_items.push(item);
+    }
+
+    received_items
 }
 
 /// Create `n_producers` producer threads, each sending a message in format `"msg from {id}"`.
@@ -30,7 +42,18 @@ pub fn multi_producer(n_producers: usize) -> Vec<String> {
     // TODO: Clone a sender for each producer
     // TODO: Remember to drop the original sender, otherwise receiver won't finish
     // TODO: Collect all messages and sort
-    todo!()
+    let (tx,rx) = mpsc::channel();
+    for i in 0..n_producers{
+        let tx=tx.clone();
+        thread::spawn(move||{
+            tx.send(format!("msg from {}",i)).unwrap();
+        });
+    
+    }
+    drop(tx);
+    let mut mess:Vec<String>=rx.iter().collect();
+    mess.sort();
+    mess
 }
 
 #[cfg(test)]
@@ -39,8 +62,8 @@ mod tests {
 
     #[test]
     fn test_simple_send_recv() {
-        let items = vec!["hello".into(), "world".into(), "rust".into()];
-        let result = simple_send_recv(items.clone());
+        let items: Vec<String> = vec!["hello".into(), "world".into(), "rust".into()];
+        let result: Vec<String> = simple_send_recv(items.clone());
         assert_eq!(result, items);
     }
 
@@ -53,13 +76,6 @@ mod tests {
     #[test]
     fn test_multi_producer() {
         let result = multi_producer(3);
-<<<<<<< HEAD
-        assert_eq!(result, vec![
-            "msg from 0".to_string(),
-            "msg from 1".to_string(),
-            "msg from 2".to_string(),
-        ]);
-=======
         assert_eq!(
             result,
             vec![
@@ -68,7 +84,6 @@ mod tests {
                 "msg from 2".to_string(),
             ]
         );
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
     }
 
     #[test]

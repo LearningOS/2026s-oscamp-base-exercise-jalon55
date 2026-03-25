@@ -134,22 +134,12 @@ cargo test --workspace
 
 ## Submitting Scores
 
-<<<<<<< HEAD
-This repository uses a CI pipeline to automatically score your exercises and submit results to the leaderboard.
-
-1. Fork this repository on [CNB](https://cnb.cool)
-2. Complete exercises locally or in the cloud-native WebIDE
-3. Push your changes to your fork
-4. Create a **Pull Request** to the upstream repository — this triggers the scoring pipeline
-5. The pipeline runs all tests, calculates your score (out of 100), and uploads it to the OpenCamp leaderboard
-=======
 Push to the `main` branch of your repository to trigger the scoring pipeline. GitHub Actions will automatically run all tests, calculate your score (out of 100), and upload it to the OpenCamp leaderboard.
 
 1. Accept the GitHub Classroom assignment link — this creates your personal repository
 2. Complete exercises locally or in **GitHub Codespaces** (click "Code" > "Codespaces" > "Create")
 3. Commit and push your changes to `main`
 4. Check the "Actions" tab to see your score
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 
 ## Notes
 
