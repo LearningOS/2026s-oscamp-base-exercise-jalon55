@@ -131,19 +131,19 @@ impl Scheduler {
     }
 
     /// Register a new green thread that will run `entry` when first scheduled.
-    ///
+    /////
     /// 1. Allocate a stack of `STACK_SIZE` bytes; compute `stack_top` (high address).
     /// 2. Set up the context: `ra = thread_wrapper` so the first switch jumps to the wrapper;
     ///    `sp` must be 16-byte aligned (e.g. `(stack_top - 16) & !15` to leave headroom).
     /// 3. Push a `GreenThread` with this context, state `Ready`, and `entry` stored for the wrapper to call.
     pub fn spawn(&mut self, entry: extern "C" fn()) {
-        let mut stack = vec![0u8; STACK_SIZE];
+        let stack = vec![0u8; STACK_SIZE];
         let stack_top = stack.as_ptr() as usize + STACK_SIZE;
         let sp = (stack_top - 16) & !15;
 
         let ctx = TaskContext {
             sp: sp as u64,
-            ra: thread_wrapper as u64,
+            ra: thread_wrapper as *const () as u64,
             ..Default::default()
         };
 

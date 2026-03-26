@@ -76,8 +76,7 @@ impl TaskContext {
 /// Must be `#[unsafe(naked)]` to prevent the compiler from generating a prologue/epilogue.
 #[unsafe(naked)]
 pub unsafe fn switch_context(old: &mut TaskContext, new: &TaskContext) {
-    unsafe {
-        core::arch::naked_asm!(
+    core::arch::naked_asm!(
             // Save callee-saved registers to old context
             "sd sp, 0(a0)",    // sp at offset 0
             "sd ra, 8(a0)",    // ra at offset 8
@@ -117,7 +116,6 @@ pub unsafe fn switch_context(old: &mut TaskContext, new: &TaskContext) {
             // Return to new context (ret = jalr zero, 0(ra))
             "ret"
         );
-    }
 }
 
 const STACK_SIZE: usize = 1024 * 64;
@@ -125,7 +123,7 @@ const STACK_SIZE: usize = 1024 * 64;
 /// Allocate a stack for a coroutine. Returns `(buffer, stack_top)` where `stack_top` is the high address
 /// (stack grows down). The buffer must be kept alive for the lifetime of the context using this stack.
 pub fn alloc_stack() -> (Vec<u8>, usize) {
-    let mut buffer = vec![0u8; STACK_SIZE];
+    let buffer = vec![0u8; STACK_SIZE];
     let stack_top = buffer.as_ptr() as usize + STACK_SIZE;
     // Ensure stack_top is 16-byte aligned
     let stack_top = stack_top & !0xf;
