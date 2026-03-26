@@ -19,9 +19,10 @@ pub async fn with_timeout<F, T>(future: F, timeout_ms: u64) -> Option<T>
 where
     F: Future<Output = T>,
 {
-    // TODO: Use tokio::select! to race between future and sleep
-    // Or use tokio::time::timeout
-    todo!()
+    tokio::select! {
+        result = future => Some(result),
+        _ = sleep(Duration::from_millis(timeout_ms)) => None,
+    }
 }
 
 /// Race two async tasks, return the result of whichever finishes first.
@@ -32,9 +33,10 @@ where
     F1: Future<Output = T>,
     F2: Future<Output = T>,
 {
-    // TODO: Use tokio::select! to wait for f1 and f2
-    // Return the result of whichever completes first
-    todo!()
+    tokio::select! {
+        result = f1 => result,
+        result = f2 => result,
+    }
 }
 
 #[cfg(test)]
@@ -49,12 +51,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_timeout_expired() {
-<<<<<<< HEAD
-        let result = with_timeout(async {
-            sleep(Duration::from_millis(200)).await;
-            42
-        }, 50).await;
-=======
         let result = with_timeout(
             async {
                 sleep(Duration::from_millis(200)).await;
@@ -63,7 +59,6 @@ mod tests {
             50,
         )
         .await;
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
         assert_eq!(result, None);
     }
 
@@ -78,12 +73,8 @@ mod tests {
                 sleep(Duration::from_millis(200)).await;
                 "slow"
             },
-<<<<<<< HEAD
-        ).await;
-=======
         )
         .await;
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
         assert_eq!(result, "fast");
     }
 
@@ -98,12 +89,8 @@ mod tests {
                 sleep(Duration::from_millis(10)).await;
                 "fast"
             },
-<<<<<<< HEAD
-        ).await;
-=======
         )
         .await;
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
         assert_eq!(result, "fast");
     }
 }

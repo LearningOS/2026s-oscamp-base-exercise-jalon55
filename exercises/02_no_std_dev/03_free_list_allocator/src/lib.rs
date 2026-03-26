@@ -116,10 +116,54 @@ unsafe impl GlobalAlloc for FreeListAllocator {
         // - If found, remove it from the list (update prev's next or the free_list head)
         // - Return curr as *mut u8
 
+        let mut prev_ptr: *mut *mut FreeBlock = null_mut();
+        let mut curr = self.free_list_head();
+
+        // 遍历空闲链表
+        while !curr.is_null() {
+            let block = &*curr;
+            let addr = curr as usize;
+
+            // 检查对齐和大小
+            if addr % align == 0 && block.size >= size {
+                // 找到合适的块,从链表中移除
+                if prev_ptr.is_null() {
+                    // 移除头节点
+                    self.set_free_list_head(block.next);
+                } else {
+                    // 移除中间节点
+                    *prev_ptr = block.next;
+                }
+                return curr as *mut u8;
+            }
+
+            prev_ptr = &mut (*curr).next as *mut *mut FreeBlock;
+            curr = block.next;
+        }
+
         // TODO: Step 2 — no suitable block in free_list, allocate from bump region
         //
         // Same logic as 02_bump_allocator's alloc
-        todo!()
+
+        loop {
+            let current_next = self.bump_next.load(core::sync::atomic::Ordering::SeqCst);
+            let aligned = (current_next + align - 1) & !(align - 1);
+            let alloc_end = aligned + size;
+
+            if alloc_end > self.heap_end {
+                return null_mut();
+            }
+
+            match self.bump_next.compare_exchange(
+                current_next,
+                alloc_end,
+                core::sync::atomic::Ordering::SeqCst,
+                core::sync::atomic::Ordering::SeqCst,
+            ) {
+                Ok(_) => return aligned as *mut u8,
+                Err(_) => continue,
+            }
+        }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
@@ -131,7 +175,18 @@ unsafe impl GlobalAlloc for FreeListAllocator {
         // 1. Cast ptr to *mut FreeBlock
         // 2. Write FreeBlock { size, next: current list head }
         // 3. Update free_list head to ptr
-        todo!()
+
+        let block = ptr as *mut FreeBlock;
+        let current_head = self.free_list_head();
+
+        // 写入 FreeBlock 头部信息
+        block.write(FreeBlock {
+            size,
+            next: current_head,
+        });
+
+        // 更新链表头
+        self.set_free_list_head(block);
     }
 }
 

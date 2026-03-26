@@ -14,10 +14,23 @@ use tokio::time::{sleep, Duration};
 ///
 /// Hint: Create `tokio::spawn` task for each i, collect JoinHandle, await them sequentially.
 pub async fn concurrent_squares(n: usize) -> Vec<usize> {
-    // TODO: Create n asynchronous tasks, each computing i * i
-    // TODO: Collect all JoinHandle
-    // TODO: Await each one to get result
-    todo!()
+    let mut handles: Vec<JoinHandle<usize>> = Vec::new();
+
+    // Create n asynchronous tasks, each computing i * i
+    for i in 0..n {
+        let handle = tokio::spawn(async move {
+            i * i
+        });
+        handles.push(handle);
+    }
+
+    // Collect all results by awaiting each handle
+    let mut results = Vec::new();
+    for handle in handles {
+        results.push(handle.await.unwrap());
+    }
+
+    results
 }
 
 /// Concurrently execute multiple "time-consuming" tasks (simulated with sleep), return all results.
@@ -25,10 +38,25 @@ pub async fn concurrent_squares(n: usize) -> Vec<usize> {
 ///
 /// Key: All tasks should execute concurrently, total duration should be close to single task duration, not sum of all tasks.
 pub async fn parallel_sleep_tasks(n: usize, duration_ms: u64) -> Vec<usize> {
-    // TODO: Create asynchronous task for each id in 0..n
-    // TODO: Each task sleeps specified duration and returns its own id
-    // TODO: Collect all results and sort
-    todo!()
+    let mut handles: Vec<JoinHandle<usize>> = Vec::new();
+
+    // Create asynchronous task for each id in 0..n
+    for task_id in 0..n {
+        let handle = tokio::spawn(async move {
+            sleep(Duration::from_millis(duration_ms)).await;
+            task_id
+        });
+        handles.push(handle);
+    }
+
+    // Collect all results and sort
+    let mut results: Vec<usize> = Vec::new();
+    for handle in handles {
+        results.push(handle.await.unwrap());
+    }
+    results.sort();
+
+    results
 }
 
 #[cfg(test)]
@@ -62,14 +90,10 @@ mod tests {
 
         assert_eq!(result, vec![0, 1, 2, 3, 4]);
         // Concurrent execution, total time should be much less than 5 * 100ms
-<<<<<<< HEAD
-        assert!(elapsed.as_millis() < 400, "Tasks should run concurrently, took {}ms", elapsed.as_millis());
-=======
         assert!(
             elapsed.as_millis() < 400,
             "Tasks should run concurrently, took {}ms",
             elapsed.as_millis()
         );
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
     }
 }

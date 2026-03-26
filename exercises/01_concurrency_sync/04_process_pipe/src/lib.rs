@@ -116,18 +116,15 @@ pub fn pipe_through_cat(input: &str) -> String {
     // TODO: Write input to child process stdin
     // TODO: Drop stdin to close pipe (otherwise cat won't exit)
     // TODO: Read output from child process stdout
-    //let output = Command::new(program);
     // 1. Create command
     let mut cmd = if cfg!(windows) {
         // 在 Windows 上使用 PowerShell 模拟 cat
-        // "$input" 表示接收管道输入并原样输出，比使用 "cat" 别名更稳定
         let mut cmd = Command::new("powershell.exe");
         cmd.arg("-NoProfile").arg("-Command").arg("$input");
         cmd
     } else {
         Command::new("cat")
     };
-
     // 2. Spawn process
     let mut child = cmd
         .stdin(Stdio::piped())

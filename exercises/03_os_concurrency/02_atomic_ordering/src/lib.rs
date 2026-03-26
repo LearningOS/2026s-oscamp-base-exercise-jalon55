@@ -15,17 +15,10 @@
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
-<<<<<<< HEAD
-    /// Use Release-Acquire semantics to safely pass data between two threads.
-    ///
-    /// `produce` writes data first, then sets flag with Release;
-    /// `consume` reads flag with Acquire, ensuring it sees the data.
-=======
 /// Use Release-Acquire semantics to safely pass data between two threads.
 ///
 /// `produce` writes data first, then sets flag with Release;
 /// `consume` reads flag with Acquire, ensuring it sees the data.
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 pub struct FlagChannel {
     data: AtomicU32,
     ready: AtomicBool,
@@ -45,9 +38,10 @@ impl FlagChannel {
     /// - What Ordering should be used for writing data?
     /// - What Ordering should be used for writing ready? (ensuring data writes are visible to consumer)
     pub fn produce(&self, value: u32) {
-        // TODO: Store data (choose appropriate Ordering)
-        // TODO: Set ready = true (choose appropriate Ordering so data writes complete before this)
-        todo!()
+        // Store data with Release ordering to ensure it completes before ready flag
+        self.data.store(value, Ordering::Release);
+        // Set ready flag with Release ordering to ensure data writes are visible to consumer
+        self.ready.store(true, Ordering::Release);
     }
 
     /// Consumer: spin-wait for ready flag, then read data.
@@ -56,9 +50,12 @@ impl FlagChannel {
     /// - What Ordering should be used for reading ready? (ensuring it sees data writes from produce)
     /// - What Ordering should be used for reading data?
     pub fn consume(&self) -> u32 {
-        // TODO: Spin-wait for ready to become true (choose appropriate Ordering)
-        // TODO: Read data (choose appropriate Ordering)
-        todo!()
+        // Spin-wait for ready to become true with Acquire ordering
+        while !self.ready.load(Ordering::Acquire) {
+            // Busy wait
+        }
+        // Read data with Acquire ordering to ensure we see the complete data
+        self.data.load(Ordering::Acquire)
     }
 
     /// Reset channel state
@@ -88,15 +85,30 @@ impl OnceCell {
     ///
     /// Hint: use `compare_exchange` to ensure only one thread succeeds.
     pub fn init(&self, val: u32) -> bool {
-        // TODO: Use compare_exchange to ensure initialization only once
-        // Store value on success
-        todo!()
+        // Use compare_exchange to ensure only one thread succeeds
+        // SeqCst ordering ensures total ordering across all threads
+        match self.initialized.compare_exchange(
+            false,
+            true,
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        ) {
+            Ok(_) => {
+                self.value.store(val, Ordering::SeqCst);
+                true
+            }
+            Err(_) => false,
+        }
     }
 
     /// Get value. Returns Some if initialized, otherwise None.
     pub fn get(&self) -> Option<u32> {
-        // TODO: Check initialized flag, then read value
-        todo!()
+        // Check initialized flag with SeqCst ordering
+        if self.initialized.load(Ordering::SeqCst) {
+            Some(self.value.load(Ordering::SeqCst))
+        } else {
+            None
+        }
     }
 }
 
@@ -115,13 +127,7 @@ mod tests {
             ch2.produce(42);
         });
 
-<<<<<<< HEAD
-        let consumer = thread::spawn(move || {
-            ch.consume()
-        });
-=======
         let consumer = thread::spawn(move || ch.consume());
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 
         producer.join().unwrap();
         let val = consumer.join().unwrap();

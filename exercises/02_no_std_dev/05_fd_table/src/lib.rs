@@ -48,42 +48,57 @@ pub trait File: Send + Sync {
 
 /// File descriptor table
 pub struct FdTable {
-    // TODO: Design the internal structure
-    // Hint: use Vec<Option<Arc<dyn File>>>
-    //       the index is the fd number, None means the fd is closed or unallocated
+    // Use Vec<Option<Arc<dyn File>>>
+    // the index is the fd number, None means the fd is closed or unallocated
+    table: Vec<Option<Arc<dyn File>>>,
 }
 
 impl FdTable {
     /// Create an empty fd table
     pub fn new() -> Self {
-        // TODO
-        todo!()
+        Self {
+            table: Vec::new(),
+        }
     }
 
     /// Allocate a new fd, return the fd number.
     ///
     /// Prefers reusing the smallest closed fd number; if no free slot, appends to the end.
     pub fn alloc(&mut self, file: Arc<dyn File>) -> usize {
-        // TODO
-        todo!()
+        // First, try to find the smallest free slot (None entry)
+        if let Some(pos) = self.table.iter().position(|entry| entry.is_none()) {
+            self.table[pos] = Some(file);
+            return pos;
+        }
+
+        // No free slot found, append to the end
+        let fd = self.table.len();
+        self.table.push(Some(file));
+        fd
     }
 
     /// Get the file object for an fd. Returns None if the fd doesn't exist or is closed.
     pub fn get(&self, fd: usize) -> Option<Arc<dyn File>> {
-        // TODO
-        todo!()
+        self.table.get(fd).and_then(|entry| entry.clone())
     }
 
     /// Close an fd. Returns true on success, false if the fd doesn't exist or is already closed.
     pub fn close(&mut self, fd: usize) -> bool {
-        // TODO
-        todo!()
+        if fd >= self.table.len() {
+            return false;
+        }
+
+        if self.table[fd].is_some() {
+            self.table[fd] = None;
+            true
+        } else {
+            false
+        }
     }
 
     /// Return the number of currently allocated fds (excluding closed ones)
     pub fn count(&self) -> usize {
-        // TODO
-        todo!()
+        self.table.iter().filter(|entry| entry.is_some()).count()
     }
 }
 
@@ -108,14 +123,10 @@ mod tests {
 
     impl MockFile {
         fn new(id: usize) -> Arc<Self> {
-<<<<<<< HEAD
-            Arc::new(Self { id, write_log: Mutex::new(vec![]) })
-=======
             Arc::new(Self {
                 id,
                 write_log: Mutex::new(vec![]),
             })
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
         }
     }
 
@@ -166,14 +177,10 @@ mod tests {
         let fd2 = table.alloc(MockFile::new(2)); // fd=2
 
         assert!(table.close(fd1), "closing fd=1 should succeed");
-<<<<<<< HEAD
-        assert!(table.get(fd1).is_none(), "get should return None after close");
-=======
         assert!(
             table.get(fd1).is_none(),
             "get should return None after close"
         );
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
 
         // Next allocation should reuse fd=1 (smallest free)
         let fd_new = table.alloc(MockFile::new(99));
@@ -185,14 +192,10 @@ mod tests {
     #[test]
     fn test_close_invalid() {
         let mut table = FdTable::new();
-<<<<<<< HEAD
-        assert!(!table.close(0), "closing non-existent fd should return false");
-=======
         assert!(
             !table.close(0),
             "closing non-existent fd should return false"
         );
->>>>>>> 1196ac363c2cba1dcd7f33cf584b5d746f396ffd
     }
 
     #[test]
