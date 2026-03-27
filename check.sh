@@ -1,3 +1,5 @@
+#![no_std]
+#![cfg(target_arch = "riscv64")]
 #!/bin/bash
 # OSCamp Exercise Checker
 # Checks each exercise's test status locally (no scoring — scoring runs in CI).

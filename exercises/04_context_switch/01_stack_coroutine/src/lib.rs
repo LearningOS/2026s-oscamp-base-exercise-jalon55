@@ -12,7 +12,7 @@
 //! ## riscv64 ABI (for this exercise)
 //! - Callee-saved: `sp`, `ra`, `s0`–`s11`. The `ret` instruction is `jalr zero, 0(ra)`.
 //! - First and second arguments: `a0` (old context), `a1` (new context).
-
+#![no_std]
 #![cfg(target_arch = "riscv64")]
 #![feature(naked_functions_rustic_abi)]
 
