@@ -12,7 +12,7 @@
 //! ## riscv64 ABI (for this exercise)
 //! - Callee-saved: `sp`, `ra`, `s0`–`s11`. The `ret` instruction is `jalr zero, 0(ra)`.
 //! - First and second arguments: `a0` (old context), `a1` (new context).
-#![no_std]
+
 #![cfg(target_arch = "riscv64")]
 #![feature(naked_functions_rustic_abi)]
 
@@ -74,8 +74,8 @@ impl TaskContext {
 /// In asm: store `sp`, `ra`, `s0`–`s11` to `[a0]` (old), load from `[a1]` (new), zero `a0`/`a1` so we do not leak pointers into the new context, then `ret`.
 ///
 /// Must be `#[unsafe(naked)]` to prevent the compiler from generating a prologue/epilogue.
-#[unsafe(naked)]              
-pub unsafe fn switch_context(old: &mut TaskContext, new: &TaskContext) {
+#[unsafe(naked)]
+pub unsafe extern "C" fn switch_context(old: &mut TaskContext, new: &TaskContext) {
     core::arch::naked_asm!(
             // Save callee-saved registers to old context
             "sd sp, 0(a0)",    // sp at offset 0
