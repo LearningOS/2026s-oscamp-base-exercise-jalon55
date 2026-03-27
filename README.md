@@ -126,7 +126,7 @@ cargo test --workspace
 
 ## Workflow
 
-1. **Start**: Run `./target/debug/oscamp watch` to enter interactive mode
+1. **Start**: Run `./target/debug/oscamp.exe watch` to enter interactive mode
 2. **Read**: Open current exercise file `src/lib.rs`, read documentation to understand concepts
 3. **Code**: Find `todo!()` markers, complete code according to comment hints
 4. **Save**: After saving file, CLI automatically re-runs tests
